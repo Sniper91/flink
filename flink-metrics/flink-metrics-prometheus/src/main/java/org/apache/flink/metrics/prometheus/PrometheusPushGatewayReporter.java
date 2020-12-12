@@ -28,6 +28,7 @@ import org.apache.flink.util.AbstractID;
 import org.apache.flink.util.StringUtils;
 
 import io.prometheus.client.CollectorRegistry;
+import io.prometheus.client.exporter.BasicAuthHttpConnectionFactory;
 import io.prometheus.client.exporter.PushGateway;
 
 import java.io.IOException;
@@ -39,8 +40,11 @@ import static org.apache.flink.metrics.prometheus.PrometheusPushGatewayReporterO
 import static org.apache.flink.metrics.prometheus.PrometheusPushGatewayReporterOptions.GROUPING_KEY;
 import static org.apache.flink.metrics.prometheus.PrometheusPushGatewayReporterOptions.HOST;
 import static org.apache.flink.metrics.prometheus.PrometheusPushGatewayReporterOptions.JOB_NAME;
+import static org.apache.flink.metrics.prometheus.PrometheusPushGatewayReporterOptions.NEED_BASIC_AUTH;
+import static org.apache.flink.metrics.prometheus.PrometheusPushGatewayReporterOptions.PASSWORD;
 import static org.apache.flink.metrics.prometheus.PrometheusPushGatewayReporterOptions.PORT;
 import static org.apache.flink.metrics.prometheus.PrometheusPushGatewayReporterOptions.RANDOM_JOB_NAME_SUFFIX;
+import static org.apache.flink.metrics.prometheus.PrometheusPushGatewayReporterOptions.USER;
 
 /**
  * {@link MetricReporter} that exports {@link Metric Metrics} via Prometheus {@link PushGateway}.
@@ -61,12 +65,19 @@ public class PrometheusPushGatewayReporter extends AbstractPrometheusReporter im
 		String host = config.getString(HOST.key(), HOST.defaultValue());
 		int port = config.getInteger(PORT.key(), PORT.defaultValue());
 		String configuredJobName = config.getString(JOB_NAME.key(), JOB_NAME.defaultValue());
-		boolean randomSuffix = config.getBoolean(RANDOM_JOB_NAME_SUFFIX.key(), RANDOM_JOB_NAME_SUFFIX.defaultValue());
-		deleteOnShutdown = config.getBoolean(DELETE_ON_SHUTDOWN.key(), DELETE_ON_SHUTDOWN.defaultValue());
-		groupingKey = parseGroupingKey(config.getString(GROUPING_KEY.key(), GROUPING_KEY.defaultValue()));
+		boolean randomSuffix = config.getBoolean(
+			RANDOM_JOB_NAME_SUFFIX.key(),
+			RANDOM_JOB_NAME_SUFFIX.defaultValue());
+		deleteOnShutdown = config.getBoolean(
+			DELETE_ON_SHUTDOWN.key(),
+			DELETE_ON_SHUTDOWN.defaultValue());
+		groupingKey = parseGroupingKey(config.getString(
+			GROUPING_KEY.key(),
+			GROUPING_KEY.defaultValue()));
 
 		if (host == null || host.isEmpty() || port < 1) {
-			throw new IllegalArgumentException("Invalid host/port configuration. Host: " + host + " Port: " + port);
+			throw new IllegalArgumentException(
+				"Invalid host/port configuration. Host: " + host + " Port: " + port);
 		}
 
 		if (randomSuffix) {
@@ -76,8 +87,23 @@ public class PrometheusPushGatewayReporter extends AbstractPrometheusReporter im
 		}
 
 		pushGateway = new PushGateway(host + ':' + port);
-		log.info("Configured PrometheusPushGatewayReporter with {host:{}, port:{}, jobName:{}, randomJobNameSuffix:{}, deleteOnShutdown:{}, groupingKey:{}}",
-			host, port, jobName, randomSuffix, deleteOnShutdown, groupingKey);
+		boolean needBasicAuth = config.getBoolean(
+			NEED_BASIC_AUTH.key(),
+			NEED_BASIC_AUTH.defaultValue());
+		if (needBasicAuth) {
+			String user = config.getString(USER.key(), USER.defaultValue());
+			String password = config.getString(PASSWORD.key(), PASSWORD.defaultValue());
+			pushGateway.setConnectionFactory(new BasicAuthHttpConnectionFactory(user, password));
+		}
+		log.info(
+			"Configured PrometheusPushGatewayReporter with {host:{}, port:{}, jobName:{}, randomJobNameSuffix:{}, deleteOnShutdown:{}, groupingKey:{}, needBasicAuth: {}",
+			host,
+			port,
+			jobName,
+			randomSuffix,
+			deleteOnShutdown,
+			groupingKey,
+			needBasicAuth);
 	}
 
 	Map<String, String> parseGroupingKey(final String groupingKeyConfig) {
@@ -93,8 +119,12 @@ public class PrometheusPushGatewayReporter extends AbstractPrometheusReporter im
 
 				String labelKey = kv.substring(0, idx);
 				String labelValue = kv.substring(idx + 1);
-				if (StringUtils.isNullOrWhitespaceOnly(labelKey) || StringUtils.isNullOrWhitespaceOnly(labelValue)) {
-					log.warn("Invalid groupingKey {labelKey:{}, labelValue:{}} must not be empty", labelKey, labelValue);
+				if (StringUtils.isNullOrWhitespaceOnly(labelKey)
+					|| StringUtils.isNullOrWhitespaceOnly(labelValue)) {
+					log.warn(
+						"Invalid groupingKey {labelKey:{}, labelValue:{}} must not be empty",
+						labelKey,
+						labelValue);
 					continue;
 				}
 				groupingKey.put(labelKey, labelValue);
@@ -110,7 +140,11 @@ public class PrometheusPushGatewayReporter extends AbstractPrometheusReporter im
 		try {
 			pushGateway.push(CollectorRegistry.defaultRegistry, jobName, groupingKey);
 		} catch (Exception e) {
-			log.warn("Failed to push metrics to PushGateway with jobName {}, groupingKey {}.", jobName, groupingKey, e);
+			log.warn(
+				"Failed to push metrics to PushGateway with jobName {}, groupingKey {}.",
+				jobName,
+				groupingKey,
+				e);
 		}
 	}
 
@@ -120,7 +154,11 @@ public class PrometheusPushGatewayReporter extends AbstractPrometheusReporter im
 			try {
 				pushGateway.delete(jobName, groupingKey);
 			} catch (IOException e) {
-				log.warn("Failed to delete metrics from PushGateway with jobName {}, groupingKey {}.", jobName, groupingKey, e);
+				log.warn(
+					"Failed to delete metrics from PushGateway with jobName {}, groupingKey {}.",
+					jobName,
+					groupingKey,
+					e);
 			}
 		}
 		super.close();

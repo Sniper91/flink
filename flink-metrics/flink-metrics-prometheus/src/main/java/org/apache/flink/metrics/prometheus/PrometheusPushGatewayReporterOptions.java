@@ -41,6 +41,24 @@ public class PrometheusPushGatewayReporterOptions {
 		.defaultValue(-1)
 		.withDescription("The PushGateway server port.");
 
+	public static final ConfigOption<Boolean> NEED_BASIC_AUTH = ConfigOptions
+		.key("needBasicAuth")
+		.defaultValue(false)
+		.withDescription(
+			"Specifies whether the push gateway server needs HTTP basic authentication.");
+
+	public static final ConfigOption<String> USER = ConfigOptions
+		.key("user")
+		.defaultValue("")
+		.withDescription(
+			"Specifies the user if the push gateway server needs HTTP basic authentication.");
+
+	public static final ConfigOption<String> PASSWORD = ConfigOptions
+		.key("password")
+		.defaultValue("")
+		.withDescription(
+			"Specifies the password if the push gateway server needs HTTP basic authentication.");
+
 	public static final ConfigOption<String> JOB_NAME = ConfigOptions
 		.key("jobName")
 		.defaultValue("")
@@ -60,21 +78,29 @@ public class PrometheusPushGatewayReporterOptions {
 		.key("filterLabelValueCharacters")
 		.defaultValue(true)
 		.withDescription(Description.builder()
-			.text("Specifies whether to filter label value characters." +
-				" If enabled, all characters not matching [a-zA-Z0-9:_] will be removed," +
-				" otherwise no characters will be removed." +
-				" Before disabling this option please ensure that your" +
-				" label values meet the %s.", LinkElement.link("https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels", "Prometheus requirements"))
+			.text(
+				"Specifies whether to filter label value characters." +
+					" If enabled, all characters not matching [a-zA-Z0-9:_] will be removed," +
+					" otherwise no characters will be removed." +
+					" Before disabling this option please ensure that your" +
+					" label values meet the %s.",
+				LinkElement.link(
+					"https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels",
+					"Prometheus requirements"))
 			.build());
 
 	public static final ConfigOption<String> GROUPING_KEY = ConfigOptions
 		.key("groupingKey")
 		.defaultValue("")
-			.withDescription(Description.builder()
-				.text("Specifies the grouping key which is the group and global labels of all metrics." +
-					" The label name and value are separated by '=', and labels are separated by ';', e.g., %s." +
+		.withDescription(Description.builder()
+			.text(
+				"Specifies the grouping key which is the group and global labels of all metrics." +
+					" The label name and value are separated by '=', and labels are separated by ';', e.g., %s."
+					+
 					" Please ensure that your grouping key meets the %s.",
-					TextElement.code("k1=v1;k2=v2"),
-					LinkElement.link("https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels", "Prometheus requirements"))
-					.build());
+				TextElement.code("k1=v1;k2=v2"),
+				LinkElement.link(
+					"https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels",
+					"Prometheus requirements"))
+			.build());
 }
